@@ -1,0 +1,60 @@
+#include <iostream>
+#include <any>
+#include <stdexcept>
+#include <string>
+
+using namespace std;
+
+class BadTypeException : public exception {
+public:
+    const char* what() const noexcept override {
+        return "BadTypeException: Incorrect type requested from container.";
+    }
+};
+
+class TypeSafeContainer {
+private:
+    any data;
+
+public:
+    template<typename T>
+    void store(const T& value) {
+        data = value;
+    }
+
+    template<typename T>
+    T get() const {
+        if (!data.has_value()) {
+            throw runtime_error("No value stored.");
+        }
+
+        if (data.type() != typeid(T)) {
+            throw BadTypeException();
+        }
+
+        return any_cast<T>(data);
+    }
+};
+
+int main() {
+    TypeSafeContainer container;
+
+    try {
+        container.store<string>("Hello, world!");
+        cout << "Stored string: " << container.get<string>() << endl;
+
+        container.store<int>(42);
+        cout << "Stored int: " << container.get<int>() << endl;
+
+        cout << "Trying to get string after storing int: ";
+        string value = container.get<string>();
+        cout << value << endl;
+
+    } catch (const BadTypeException& ex) {
+        cerr << ex.what() << endl;
+    } catch (const exception& ex) {
+        cerr << "Other exception: " << ex.what() << endl;
+    }
+
+    return 0;
+}
